@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "IL2Amiga": {
+      "commandName": "Project",
+      "commandLineArgs": "..\\..\\..\\..\\..\\..\\sample_data\\helloworld.dll"
+    }
+  }
+}
