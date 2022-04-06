@@ -1,4 +1,9 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection.Metadata;
+using System.Reflection;
+using IL2Amiga.Engine.MethodAnalysis;
+using System.Collections.Immutable;
 
 namespace IL2Amiga.Engine
 {
@@ -238,6 +243,131 @@ namespace IL2Amiga.Engine
             Readonly = 0xFE1E
 
             #endregion
+        }
+        public readonly Code OpCode;
+        // Op offset within method. Used for labels etc in assembly.
+        public readonly int Position;
+        // position of the next instruction
+        public readonly int NextPosition;
+        public readonly ExceptionRegionInfoEx? CurrentExceptionRegion;
+        public Type[] StackPopTypes { get; set; } = Type.EmptyTypes;
+        public Type[] StackPushTypes { get; set; } = Type.EmptyTypes;
+
+        protected ILOpCode(Code aOpCode, int aPos, int aNextPos, ExceptionRegionInfoEx? aCurrentExceptionRegion)
+        {
+            OpCode = aOpCode;
+            Position = aPos;
+            NextPosition = aNextPos;
+            CurrentExceptionRegion = aCurrentExceptionRegion;
+        }
+
+        public override string ToString()
+        {
+            // leave here, makes easier debugging the compiler. Compiler will
+            // show for example "IL_0001: ldstr" instead of just ILOpCode
+            return $"IL_{Position:X4}: {OpCode}";
+        }
+
+        /// <summary>
+        /// Returns the number of items popped from the stack. This is the logical stack, not physical items.
+        /// So a 100byte struct is 1 pop, even though it might be multiple 32-bit or 64-bit words on the stack.
+        /// </summary>
+        /// <param name="aMethod"></param>
+        public abstract int GetNumberOfStackPops(MethodBase aMethod);
+
+        /// <summary>
+        /// Returns the number of items pushed to the stack. This is the logical stack, not physical items.
+        /// So a 100byte struct is 1 pop, even though it might be multiple 32-bit or 64-bit words on the stack.
+        /// </summary>
+        /// <param name="method"></param>
+        public abstract int GetNumberOfStackPushes(MethodBase method);
+        internal void InitStackAnalysis(MethodBase method)
+        {
+            StackPopTypes = new Type[GetNumberOfStackPops(method)];
+            StackPushTypes = new Type[GetNumberOfStackPushes(method)];
+            DoInitStackAnalysis(method);
+        }
+
+        protected virtual void DoInitStackAnalysis(MethodBase aMethod)
+        {
+        }
+
+
+        /// <summary>
+        /// Gets set to true on first interpreter processing. Is used for loop detection
+        /// </summary>
+        internal bool Processed = false;
+
+        public uint? StackOffsetBeforeExecution = null;
+        public void DoStackAnalysis(Stack<Type> stack, ref uint stackOffset)
+        {
+            if (StackPopTypes is null || StackPushTypes is null)
+            {
+                throw new Exception("Call InitStackAnalysis before");
+            }
+            StackOffsetBeforeExecution = stackOffset;
+
+            // if current instruction is the first instruction of a filter or catch statement, "push" the exception type now
+            if (CurrentExceptionRegion != null && (CurrentExceptionRegion.HandlerOffset == Position ||
+              (CurrentExceptionRegion.FilterOffset == Position && CurrentExceptionRegion.FilterOffset != 0)))
+            {
+                if (CurrentExceptionRegion.Kind != ExceptionRegionKind.Finally)
+                {
+                    stack.Push(typeof(object));
+                    stackOffset += ILOp.Align(ILOp.SizeOfType(typeof(object)), 4);
+                }
+            }
+
+
+            if (StackPopTypes?.Length > stack.Count)
+            {
+                throw new Exception(String.Format("OpCode {0} tries to pop more stuff from analytical stack than there is!", this));
+            }
+
+            var pos = 0;
+            foreach (var xPopItem in StackPopTypes!)
+            {
+                var popped = stack.Pop();
+
+                if (xPopItem is null)
+                {
+                    StackPopTypes[pos] = popped;
+                }
+                else if (xPopItem != popped && xPopItem.IsAssignableTo(popped))
+                {
+                    throw new Exception($"Tried to pop a {xPopItem} from the stack but found a {popped}");
+                }
+                stackOffset -= ILOp.Align(ILOp.SizeOfType(popped), 4);
+                pos++;
+            }
+
+            DoInterpretStackTypes();
+
+            foreach (var xPushItem in StackPushTypes)
+            {
+                stack.Push(xPushItem);
+                stackOffset += ILOp.Align(ILOp.SizeOfType(xPushItem), 4);
+            }
+        }
+
+        /// <summary>
+        /// Based on updated StackPopTypes, try to update
+        /// </summary>
+        public abstract void DoInterpretStackTypes();
+
+        [Conditional("COSMOSDEBUG")]
+        public static void ILInterpretationDebugLine(Func<string> message)
+        {
+            Console.WriteLine(message());
+        }
+
+        /// <summary>
+        /// Return the position of all instructions which can be reached from this one and if they should be part of the current group or not
+        /// </summary>
+        /// <returns></returns>
+        public virtual List<(bool NewGroup, int Position)> GetNextOpCodePositions()
+        {
+            return new List<(bool NewGroup, int Position)> { (false, NextPosition) };
         }
     }
 }

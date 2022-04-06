@@ -3,24 +3,45 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.1.32328.378
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IL2Amiga", "IL2Amiga\IL2Amiga.csproj", "{AA649EE3-F23B-4B62-8606-B84BBBB4F865}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IL2Amiga", "IL2Amiga\IL2Amiga.csproj", "{AA649EE3-F23B-4B62-8606-B84BBBB4F865}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IL2Amiga.Engine", "IL2Amiga.Engine\IL2Amiga.Engine.csproj", "{F12202AD-0B8D-4BC6-ABAB-E537837CE4F2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IL2Amiga.Engine", "IL2Amiga.Engine\IL2Amiga.Engine.csproj", "{F12202AD-0B8D-4BC6-ABAB-E537837CE4F2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IL2CPU.Debug.Symbols", "IL2CPU.Debug.Symbols\IL2CPU.Debug.Symbols.csproj", "{23A0179B-FDB6-4198-8DB7-316162D0021E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DapperExtensions.StrongName", "DapperExtensions.StrongName\DapperExtensions.StrongName.csproj", "{F3C0CD9A-D9F4-4206-8A45-50F4E0592F95}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
+		TEST|Any CPU = TEST|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{AA649EE3-F23B-4B62-8606-B84BBBB4F865}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{AA649EE3-F23B-4B62-8606-B84BBBB4F865}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AA649EE3-F23B-4B62-8606-B84BBBB4F865}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AA649EE3-F23B-4B62-8606-B84BBBB4F865}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AA649EE3-F23B-4B62-8606-B84BBBB4F865}.TEST|Any CPU.ActiveCfg = Release|Any CPU
+		{AA649EE3-F23B-4B62-8606-B84BBBB4F865}.TEST|Any CPU.Build.0 = Release|Any CPU
 		{F12202AD-0B8D-4BC6-ABAB-E537837CE4F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F12202AD-0B8D-4BC6-ABAB-E537837CE4F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F12202AD-0B8D-4BC6-ABAB-E537837CE4F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F12202AD-0B8D-4BC6-ABAB-E537837CE4F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F12202AD-0B8D-4BC6-ABAB-E537837CE4F2}.TEST|Any CPU.ActiveCfg = Release|Any CPU
+		{F12202AD-0B8D-4BC6-ABAB-E537837CE4F2}.TEST|Any CPU.Build.0 = Release|Any CPU
+		{23A0179B-FDB6-4198-8DB7-316162D0021E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{23A0179B-FDB6-4198-8DB7-316162D0021E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{23A0179B-FDB6-4198-8DB7-316162D0021E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{23A0179B-FDB6-4198-8DB7-316162D0021E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{23A0179B-FDB6-4198-8DB7-316162D0021E}.TEST|Any CPU.ActiveCfg = TEST|Any CPU
+		{23A0179B-FDB6-4198-8DB7-316162D0021E}.TEST|Any CPU.Build.0 = TEST|Any CPU
+		{F3C0CD9A-D9F4-4206-8A45-50F4E0592F95}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3C0CD9A-D9F4-4206-8A45-50F4E0592F95}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3C0CD9A-D9F4-4206-8A45-50F4E0592F95}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3C0CD9A-D9F4-4206-8A45-50F4E0592F95}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3C0CD9A-D9F4-4206-8A45-50F4E0592F95}.TEST|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3C0CD9A-D9F4-4206-8A45-50F4E0592F95}.TEST|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

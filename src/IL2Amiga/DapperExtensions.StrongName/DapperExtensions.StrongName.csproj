@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>DapperExtensions.StrongName</Description>
+    <Authors>Rafael.Carvalho</Authors>
+    <TargetFrameworks>net6.0</TargetFrameworks>
+    <PackageId>DapperExtensions.StrongName</PackageId>
+    <Version>1.50.2</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper.StrongName" Version="2.0.90" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+  </ItemGroup>
+
+</Project>
