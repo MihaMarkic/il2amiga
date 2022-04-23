@@ -2,46 +2,44 @@
 
 namespace IL2Amiga.Engine
 {
-    public static class VTablesImplRefs
-    {
-        public static readonly Assembly? RuntimeAssemblyDef;
-        public static readonly Type? VTablesImplDef;
-        public static readonly MethodBase? SetTypeInfoRef;
-        public static readonly MethodBase? SetInterfaceInfoRef;
-        public static readonly MethodBase? SetMethodInfoRef;
-        public static readonly MethodBase? SetInterfaceMethodInfoRef;
-        public static readonly MethodBase? GetMethodAddressForTypeRef;
-        public static readonly MethodBase? GetMethodAddressForInterfaceTypeRef;
-        public static readonly MethodBase? GetDeclaringTypeOfMethodForTypeRef;
-        public static readonly MethodBase? IsInstanceRef;
-        public static readonly MethodBase? GetBaseTypeRef;
+    //public class VTablesImplRefs
+    //{
+    //    public readonly Assembly? RuntimeAssemblyDef;
+    //    public readonly Type? VTablesImplDef;
+    //    public readonly MethodBase? SetTypeInfoRef;
+    //    public readonly MethodBase? SetInterfaceInfoRef;
+    //    public readonly MethodBase? SetMethodInfoRef;
+    //    public readonly MethodBase? SetInterfaceMethodInfoRef;
+    //    public readonly MethodBase? GetMethodAddressForTypeRef;
+    //    public readonly MethodBase? GetMethodAddressForInterfaceTypeRef;
+    //    public readonly MethodBase? GetDeclaringTypeOfMethodForTypeRef;
+    //    public readonly MethodBase? IsInstanceRef;
+    //    public readonly MethodBase? GetBaseTypeRef;
 
-        public static Func<Type, uint>? GetTypeId;
-        // GC Methods
-        public static readonly MethodBase? GetGCFieldCount;
+    //    public Func<Type, uint>? GetTypeId;
+    //    // GC Methods
+    //    public readonly MethodBase? GetGCFieldCount;
 
-        static VTablesImplRefs()
-        {
-            throw new NotImplementedException();
-            //var typeResolver = CompilerEngine.TypeResolver;
-
-            //VTablesImplDef = typeResolver.ResolveType("Cosmos.Core.VTablesImpl, Cosmos.Core", true);
-            //if (VTablesImplDef == null)
-            //{
-            //    throw new Exception("Cannot find VTablesImpl in Cosmos.Core!");
-            //}
-            //foreach (FieldInfo xField in typeof(VTablesImplRefs).GetFields())
-            //{
-            //    if (xField.Name.EndsWith("Ref"))
-            //    {
-            //        MethodBase xTempMethod = VTablesImplDef.GetMethod(xField.Name.Substring(0, xField.Name.Length - "Ref".Length));
-            //        if (xTempMethod == null)
-            //        {
-            //            throw new Exception("Method '" + xField.Name.Substring(0, xField.Name.Length - "Ref".Length) + "' not found on VTablesImpl!");
-            //        }
-            //        xField.SetValue(null, xTempMethod);
-            //    }
-            //}
-        }
-    }
+    //    public VTablesImplRefs(TypeResolver typeResolver)
+    //    {
+    //        VTablesImplDef = typeResolver.ResolveType("Cosmos.Core.VTablesImpl, Cosmos.Core", true);
+    //        if (VTablesImplDef == null)
+    //        {
+    //            throw new Exception("Cannot find VTablesImpl in Cosmos.Core!");
+    //        }
+    //        foreach (FieldInfo xField in typeof(VTablesImplRefs).GetFields())
+    //        {
+    //            if (xField.Name.EndsWith("Ref"))
+    //            {
+    //                string methodName = xField.Name.Substring(0, xField.Name.Length - "Ref".Length);
+    //                MethodBase? tempMethod = VTablesImplDef.GetMethod(methodName);
+    //                if (tempMethod is null)
+    //                {
+    //                    throw new Exception($"Method '{methodName}' not found on VTablesImpl!");
+    //                }
+    //                xField.SetValue(null, tempMethod);
+    //            }
+    //        }
+    //    }
+    //}
 }

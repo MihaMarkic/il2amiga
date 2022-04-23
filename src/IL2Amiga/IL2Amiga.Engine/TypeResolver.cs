@@ -1,13 +1,16 @@
 ﻿using System.Reflection;
 using System.Runtime.Loader;
+using Microsoft.Extensions.Logging;
 
 namespace IL2Amiga.Engine
 {
-    internal class TypeResolver
+    public class TypeResolver
     {
+        readonly ILogger<TypeResolver> logger;
         readonly AssemblyLoadContext assemblyLoadContext;
-        public TypeResolver(AssemblyLoadContext assemblyLoadContext)
+        public TypeResolver(ILogger<TypeResolver> logger, IsolatedAssemblyLoadContext assemblyLoadContext)
         {
+            this.logger = logger;
             this.assemblyLoadContext = assemblyLoadContext;
         }
         public Type? ResolveType(string typeName) => Type.GetType(typeName, ResolveAssembly, ResolveType);

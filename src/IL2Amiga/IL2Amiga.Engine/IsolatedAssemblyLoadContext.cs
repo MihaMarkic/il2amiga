@@ -4,11 +4,11 @@ using System.Runtime.Loader;
 
 namespace IL2Amiga.Engine
 {
-    internal class IsolatedAssemblyLoadContext : AssemblyLoadContext
+    public class IsolatedAssemblyLoadContext : AssemblyLoadContext
     {
-        ImmutableDictionary<AssemblyIdentity, Lazy<Assembly>> assemblies;
+        ImmutableDictionary<AssemblyIdentity, Lazy<Assembly>>? assemblies;
 
-        public IsolatedAssemblyLoadContext(IEnumerable<string> assemblyPaths)
+        public void Init(IEnumerable<string> assemblyPaths)
         {
             var tempAssemblies = new Dictionary<AssemblyIdentity, Lazy<Assembly>>();
 
@@ -57,6 +57,10 @@ namespace IL2Amiga.Engine
 
         protected override Assembly? Load(AssemblyName assemblyName)
         {
+            if (assemblies is null)
+            {
+                throw new Exception("Call to Init is required");
+            }
             var assemblyIdentity = new AssemblyIdentity(assemblyName);
             assemblies.TryGetValue(assemblyIdentity, out var assembly);
 

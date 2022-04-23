@@ -1,16 +1,14 @@
 ﻿using System.Reflection;
 using IL2Amiga.Engine.Attributes;
 using IL2Amiga.Engine.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace IL2Amiga.Engine
 {
-    internal class PlugManager
+    public class PlugManager
     {
-        public bool ThrowExceptions = true;
-
-        public Action<Exception>? LogException { get; init; }
-        public Action<string> LogWarning { get; init; }
-
+        readonly ILogger<PlugManager> logger;
+        readonly TypeResolver typeResolver;
         ////public delegate void ScanMethodDelegate(MethodBase aMethod, bool aIsPlug, string sourceItem);
         //public ScanMethodDelegate ScanMethod = null;
         //public delegate void QueueDelegate(_MemberInfo aItem, object aSrc, string aSrcType, string sourceItem = null);
@@ -36,18 +34,20 @@ namespace IL2Amiga.Engine
         public IDictionary<Type, IDictionary<string, PlugField>> PlugFields => mPlugFields;
 
         Dictionary<string, MethodBase> resolvedPlugs = new Dictionary<string, MethodBase>();
-        readonly TypeResolver typeResolver;
         private static string BuildMethodKeyName(MethodBase m)
         {
             return LabelName.GetFullName(m);
         }
 
-        public PlugManager(TypeResolver typeResolver, Action<Exception> aLogException, Action<string> aLogWarning)
+        public PlugManager(ILogger<PlugManager> logger)
         {
-            this.typeResolver = typeResolver;
-            LogException = aLogException;
-            LogWarning = aLogWarning;
+            this.logger = logger;
         }
+
+        //public PlugManager(TypeResolver typeResolver)
+        //{
+        //    this.typeResolver = typeResolver;
+        //}
 
         public void FindPlugImplementors(IEnumerable<Assembly> assemblies)
         {
@@ -65,7 +65,7 @@ namespace IL2Amiga.Engine
 
             foreach (var asm in assemblies)
             {
-                LogWarning($"Loading plugs from assembly: {asm.FullName}");
+                logger.Log(LogLevel.Warning, "Loading plugs from assembly: {assembly}", asm.FullName);
                 // Find all classes marked as a Plug
                 foreach (var plugType in asm.GetTypes())
                 {
@@ -80,7 +80,7 @@ namespace IL2Amiga.Engine
                         {
                             try
                             {
-                                xTargetType = typeResolver.ResolveType(xAttrib.TargetName, true, false);
+                                xTargetType = typeResolver.ResolveType(xAttrib.TargetName ?? throw new Exception("Missing TargetName"), true, false);
                             }
                             catch (Exception ex)
                             {
@@ -92,22 +92,25 @@ namespace IL2Amiga.Engine
                             }
                         }
 
-                        Dictionary<Type, List<Type>> mPlugs;
-                        if (xTargetType.ContainsGenericParameters)
+                        if (xTargetType is not null)
                         {
-                            mPlugs = xAttrib.Inheritable ? genericPlugImplementorsInheritable : genericPlugImplementors;
-                        }
-                        else
-                        {
-                            mPlugs = xAttrib.Inheritable ? plugImplementorsInheritable : plugImplementors;
-                        }
-                        if (mPlugs.TryGetValue(xTargetType, out var xImpls))
-                        {
-                            xImpls.Add(plugType);
-                        }
-                        else
-                        {
-                            mPlugs.Add(xTargetType, new List<Type>() { plugType });
+                            Dictionary<Type, List<Type>> mPlugs;
+                            if (xTargetType.ContainsGenericParameters)
+                            {
+                                mPlugs = xAttrib.Inheritable ? genericPlugImplementorsInheritable : genericPlugImplementors;
+                            }
+                            else
+                            {
+                                mPlugs = xAttrib.Inheritable ? plugImplementorsInheritable : plugImplementors;
+                            }
+                            if (mPlugs.TryGetValue(xTargetType, out var xImpls))
+                            {
+                                xImpls.Add(plugType);
+                            }
+                            else
+                            {
+                                mPlugs.Add(xTargetType, new List<Type>() { plugType });
+                            }
                         }
                     }
                 }
@@ -279,24 +282,17 @@ if (xMethod.GetParameters().Where(x =>
 
                             if (!OK)
                             {
-                                if (xAttrib == null || !xAttrib.IsOptional)
+                                if (xAttrib is null || !xAttrib.IsOptional)
                                 {
-                                    if (LogWarning != null)
-                                    {
-                                        LogWarning("Invalid plug method! Target method not found. : " + xMethod.GetFullName());
-                                    }
+                                    logger.Log(LogLevel.Warning, "Invalid plug method! Target method {method} not found", xMethod.GetFullName());
                                 }
                             }
                         }
                         else
                         {
-                            if (xAttrib.IsWildcard
-                                && xAttrib.Assembler == null)
+                            if (xAttrib.IsWildcard && xAttrib.Assembler is null)
                             {
-                                if (LogWarning != null)
-                                {
-                                    LogWarning("Wildcard PlugMethods need to use an assembler for now.");
-                                }
+                                logger.Log(LogLevel.Warning, "Wildcard PlugMethods need to use an assembler for now.");
                             }
                         }
                     }
@@ -323,7 +319,6 @@ if (xMethod.GetParameters().Where(x =>
                 }
             }
         }
-
         private MethodBase? ResolvePlug(Type aTargetType, List<Type> aImpls, MethodBase aMethod, Type[] aParamTypes)
         {
             //TODO: This method is "reversed" from old - remember that when porting
@@ -534,7 +529,7 @@ if (xParam.GetCustomAttributes(typeof(FieldAccess), false).Length != 0)
                 }
                 else
                 {
-                    // check if signatur is equal
+                    // check if signature is equal
                     var xResPara = xResult.GetParameters();
                     var xAMethodPara = aMethod.GetParameters();
                     if (aMethod.IsStatic)
@@ -557,7 +552,7 @@ if (xParam.GetCustomAttributes(typeof(FieldAccess), false).Length != 0)
                         if (xResPara[correctIndex].ParameterType != xAMethodPara[i].ParameterType && xResPara[correctIndex].ParameterType.Name != "Object") // to cheat if we cant access the actual type
                         {
                             // Allow explicit overwriting of types by signature in case we have to hide internal enum behind uint etc
-                            if (xResult.GetCustomAttribute<PlugMethod>()?.Signature.Replace("_", "") == DataMember.FilterStringForIncorrectChars(LabelName.GetFullName(aMethod)).Replace("_", ""))
+                            if (xResult.GetCustomAttribute<PlugMethod>()?.Signature?.Replace("_", "") == DataMember.FilterStringForIncorrectChars(LabelName.GetFullName(aMethod)).Replace("_", ""))
                             {
 
                             }
@@ -623,7 +618,6 @@ if (xParam.GetCustomAttributes(typeof(FieldAccess), false).Length != 0)
 
             return xResult;
         }
-
         public MethodBase ResolvePlug(MethodBase aMethod, Type[] aParamTypes)
         {
             var xMethodKey = BuildMethodKeyName(aMethod);

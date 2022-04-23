@@ -2,16 +2,19 @@
 using System.Reflection;
 using IL2Amiga.Engine.Attributes;
 using IL2Amiga.Engine.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace IL2Amiga.Engine
 {
-    internal class ILScanner : IDisposable
+    public class ILScanner : IDisposable
     {
-        public Action<Exception>? LogException = null;
-        public Action<string>? LogWarning = null;
-
+        readonly ILogger<ILScanner> logger;
+        readonly PlugManager plugManager;
+        readonly TypeResolver typeResolver;
+        //readonly VTablesImplRefs vTablesImplRefs;
+        readonly RuntimeEngineRefs runtimeEngineRefs;
         protected ILReader mReader;
-        protected AppAssembler assembler;
+        readonly AppAssembler assembler;
 
         // List of assemblies found during scan. We cannot use the list of loaded
         // assemblies because the loaded list includes compilers, etc, and also possibly
@@ -32,14 +35,8 @@ namespace IL2Amiga.Engine
         protected IDictionary<MethodBase, uint> methodUIDs = new Dictionary<MethodBase, uint>();
         protected IDictionary<Type, uint> mTypeUIDs = new Dictionary<Type, uint>();
 
-        //protected PlugManager mPlugManager = null;
-
-        // Logging
-        // Only use for debugging and profiling.
-        protected bool logEnabled = false;
-
         protected string? mapPathname;
-        protected TextWriter? logWriter;
+        private bool logEnabled = false;
 
         protected struct LogItem
         {
@@ -50,34 +47,23 @@ namespace IL2Amiga.Engine
         protected Dictionary<object, List<LogItem>>? logMap;
 
         //public ILScanner(AppAssembler aAsmblr, TypeResolver typeResolver, Action<Exception> aLogException, Action<string> aLogWarning)
-        //{
-        //    mAsmblr = aAsmblr;
-        //    mReader = new ILReader();
-
-        //    LogException = aLogException;
-        //    LogWarning = aLogWarning;
-
-        //    mPlugManager = new PlugManager(LogException, LogWarning, typeResolver);
-
-        //    VTablesImplRefs.GetTypeId = GetTypeUID; // we need this to figure out which ids object, valuetype and enum have in the vmt
-        //}
-        public ILScanner(Action<Exception>? aLogException, Action<string>? aLogWarning)
+        public ILScanner(ILogger<ILScanner> logger, PlugManager plugManager, TypeResolver typeResolver,// VTablesImplRefs vTablesImplRefs,
+            RuntimeEngineRefs runtimeEngineRefs, AppAssembler assembler)
         {
+            this.logger = logger;
+            this.plugManager = plugManager;
+            this.typeResolver = typeResolver;
+            //this.vTablesImplRefs = vTablesImplRefs;
+            this.runtimeEngineRefs = runtimeEngineRefs;
             mReader = new ILReader();
-            assembler = new AppAssembler();
-            LogException = aLogException;
-            LogWarning = aLogWarning;
-
-            //mPlugManager = new PlugManager(LogException, LogWarning, typeResolver);
-
-            //VTablesImplRefs.GetTypeId = GetTypeUID; // we need this to figure out which ids object, valuetype and enum have in the vmt
+            this.assembler = assembler;
+            //vTablesImplRefs.GetTypeId = GetTypeUID; // we need this to figure out which ids object, value type and enum have in the vmt
         }
 
         public bool EnableLogging(string pathname)
         {
             logMap = new Dictionary<object, List<LogItem>>();
             mapPathname = pathname;
-            logEnabled = true;
 
             // be sure that file could be written, to prevent exception on Dispose call, cause we could not make Task log in it
             try
@@ -112,7 +98,7 @@ namespace IL2Amiga.Engine
             // throwing code smaller. They are internal though, so we cannot
             // reference them directly and only via finding them as they come along.
             // We find it here, not via QueueType so we only check it here. Later
-            // we might have to checkin QueueType also.
+            // we might have to check in QueueType also.
             // So now we accept both types, but emit code for only one. This works
             // with the current Nasm assembler as we resolve by name in the assembler.
             // However with other assemblers this approach may not work.
@@ -262,55 +248,53 @@ namespace IL2Amiga.Engine
 
         #region Gen3
 
-        //public void Execute(MethodBase[] aBootEntries, List<MemberInfo> aForceIncludes, IEnumerable<Assembly> plugsAssemblies)
-        //{
-        //    foreach (var xBootEntry in aBootEntries)
-        //    {
-        //        Queue(xBootEntry.DeclaringType, null, "Boot Entry Declaring Type");
-        //        Queue(xBootEntry, null, "Boot Entry");
-        //    }
+        public void Execute(MethodBase[] aBootEntries, List<MemberInfo> aForceIncludes, IEnumerable<Assembly> plugsAssemblies)
+        {
+            foreach (var xBootEntry in aBootEntries)
+            {
+                Queue(xBootEntry.DeclaringType, null, "Boot Entry Declaring Type");
+                Queue(xBootEntry, null, "Boot Entry");
+            }
 
-        //    foreach (var xForceInclude in aForceIncludes)
-        //    {
-        //        Queue(xForceInclude, null, "Force Include");
-        //    }
+            foreach (var xForceInclude in aForceIncludes)
+            {
+                Queue(xForceInclude, null, "Force Include");
+            }
 
-        //    mPlugManager.FindPlugImpls(plugsAssemblies);
-        //    // Now that we found all plugs, scan them.
-        //    // We have to scan them after we find all plugs, because
-        //    // plugs can use other plugs
-        //    mPlugManager.ScanFoundPlugs();
-        //    foreach (var xPlug in mPlugManager.PlugImpls)
-        //    {
-        //        CompilerHelpers.Debug($"Plug found: '{xPlug.Key.FullName}' in '{xPlug.Key.Assembly.FullName}'");
-        //    }
+            plugManager.FindPlugImplementors(plugsAssemblies);
+            // Now that we found all plugs, scan them.
+            // We have to scan them after we find all plugs, because
+            // plugs can use other plugs
+            plugManager.ScanFoundPlugs();
+            foreach (var xPlug in plugManager.PlugImplementors)
+            {
+                logger.Log(LogLevel.Debug, "Plug found: '{plug}' in '{assembly}'", xPlug.Key.FullName, xPlug.Key.Assembly.FullName);
+            }
 
-        //    ILOp.PlugManager = mPlugManager;
+            // Pull in extra implementations, GC etc.
+            Queue(runtimeEngineRefs.InitializeApplicationRef, null, "Explicit Entry");
+            Queue(runtimeEngineRefs.FinalizeApplicationRef, null, "Explicit Entry");
+            //Queue(vTablesImplRefs.SetMethodInfoRef, null, "Explicit Entry");
+            //Queue(vTablesImplRefs.IsInstanceRef, null, "Explicit Entry");
+            //Queue(vTablesImplRefs.SetTypeInfoRef, null, "Explicit Entry");
+            //Queue(vTablesImplRefs.SetInterfaceInfoRef, null, "Explicit Entry");
+            //Queue(vTablesImplRefs.SetInterfaceMethodInfoRef, null, "Explicit Entry");
+            //Queue(vTablesImplRefs.GetMethodAddressForTypeRef, null, "Explicit Entry");
+            //Queue(vTablesImplRefs.GetMethodAddressForInterfaceTypeRef, null, "Explicit Entry");
+            //Queue(GCImplementationRefs.AllocNewObjectRef, null, "Explicit Entry");
+            // Pull in Array constructor
+            Queue(typeof(Array).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance).First(), null, "Explicit Entry");
+            // Pull in MulticastDelegate.GetInvocationList, needed by the Invoke plug
+            Queue(typeof(MulticastDelegate).GetMethod("GetInvocationList"), null, "Explicit Entry");
 
-        //    // Pull in extra implementations, GC etc.
-        //    Queue(RuntimeEngineRefs.InitializeApplicationRef, null, "Explicit Entry");
-        //    Queue(RuntimeEngineRefs.FinalizeApplicationRef, null, "Explicit Entry");
-        //    Queue(VTablesImplRefs.SetMethodInfoRef, null, "Explicit Entry");
-        //    Queue(VTablesImplRefs.IsInstanceRef, null, "Explicit Entry");
-        //    Queue(VTablesImplRefs.SetTypeInfoRef, null, "Explicit Entry");
-        //    Queue(VTablesImplRefs.SetInterfaceInfoRef, null, "Explicit Entry");
-        //    Queue(VTablesImplRefs.SetInterfaceMethodInfoRef, null, "Explicit Entry");
-        //    Queue(VTablesImplRefs.GetMethodAddressForTypeRef, null, "Explicit Entry");
-        //    Queue(VTablesImplRefs.GetMethodAddressForInterfaceTypeRef, null, "Explicit Entry");
-        //    Queue(GCImplementationRefs.AllocNewObjectRef, null, "Explicit Entry");
-        //    // Pull in Array constructor
-        //    Queue(typeof(Array).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance).First(), null, "Explicit Entry");
-        //    // Pull in MulticastDelegate.GetInvocationList, needed by the Invoke plug
-        //    Queue(typeof(MulticastDelegate).GetMethod("GetInvocationList"), null, "Explicit Entry");
+            assembler.ProcessField(typeof(string).GetField("Empty", BindingFlags.Static | BindingFlags.Public) ?? throw new Exception("Couldn't find Empty"));
 
-        //    mAsmblr.ProcessField(typeof(string).GetField("Empty", BindingFlags.Static | BindingFlags.Public));
+            ScanQueue();
+            UpdateAssemblies();
+            Assemble();
 
-        //    ScanQueue();
-        //    UpdateAssemblies();
-        //    Assemble();
-
-        //    mAsmblr.EmitEntrypoint(null, aBootEntries);
-        //}
+            assembler.EmitEntrypoint(null, aBootEntries.ToImmutableArray());
+        }
 
         #endregion Gen3
 
