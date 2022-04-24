@@ -2,7 +2,7 @@
   "profiles": {
     "IL2Amiga": {
       "commandName": "Project",
-      "commandLineArgs": "..\\..\\..\\..\\..\\..\\sample_data\\helloworld.dll"
+      "commandLineArgs": "..\\..\\..\\..\\..\\..\\sample_data\\helloworld.dll ..\\..\\..\\..\\IL2Amiga.Plugs\\bin\\Debug\\net6.0\\IL2Amiga.Plugs.dll"
     }
   }
 }

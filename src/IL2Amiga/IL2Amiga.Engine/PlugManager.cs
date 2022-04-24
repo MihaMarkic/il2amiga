@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Collections.Immutable;
+using System.Reflection;
 using IL2Amiga.Engine.Attributes;
 using IL2Amiga.Engine.Extensions;
 using Microsoft.Extensions.Logging;
@@ -65,26 +66,26 @@ namespace IL2Amiga.Engine
 
             foreach (var asm in assemblies)
             {
-                logger.Log(LogLevel.Warning, "Loading plugs from assembly: {assembly}", asm.FullName);
+                logger.Log(LogLevel.Information, "Loading plugs from assembly: {assembly}", asm.FullName);
                 // Find all classes marked as a Plug
                 foreach (var plugType in asm.GetTypes())
                 {
                     // Foreach, it is possible there could be one plug class with mult plug targets
-                    foreach (var xAttrib in plugType.GetCustomAttributes<Plug>(false))
+                    foreach (var attrib in plugType.GetCustomAttributes<Plug>(false))
                     {
-                        var xTargetType = xAttrib.Target;
+                        var targetType = attrib.Target;
                         // If no type is specified, try to find by a specified name.
                         // This is needed in cross assembly references where the
                         // plug cannot reference the assembly of the target type
-                        if (xTargetType == null)
+                        if (targetType is null)
                         {
                             try
                             {
-                                xTargetType = typeResolver.ResolveType(xAttrib.TargetName ?? throw new Exception("Missing TargetName"), true, false);
+                                targetType = typeResolver.ResolveType(attrib.TargetName ?? throw new Exception("Missing TargetName"), true, false);
                             }
                             catch (Exception ex)
                             {
-                                if (!xAttrib.IsOptional)
+                                if (!attrib.IsOptional)
                                 {
                                     throw new Exception("Error", ex);
                                 }
@@ -92,24 +93,24 @@ namespace IL2Amiga.Engine
                             }
                         }
 
-                        if (xTargetType is not null)
+                        if (targetType is not null)
                         {
-                            Dictionary<Type, List<Type>> mPlugs;
-                            if (xTargetType.ContainsGenericParameters)
+                            Dictionary<Type, List<Type>> plugs;
+                            if (targetType.ContainsGenericParameters)
                             {
-                                mPlugs = xAttrib.Inheritable ? genericPlugImplementorsInheritable : genericPlugImplementors;
+                                plugs = attrib.Inheritable ? genericPlugImplementorsInheritable : genericPlugImplementors;
                             }
                             else
                             {
-                                mPlugs = xAttrib.Inheritable ? plugImplementorsInheritable : plugImplementors;
+                                plugs = attrib.Inheritable ? plugImplementorsInheritable : plugImplementors;
                             }
-                            if (mPlugs.TryGetValue(xTargetType, out var xImpls))
+                            if (plugs.TryGetValue(targetType, out var implementors))
                             {
-                                xImpls.Add(plugType);
+                                implementors.Add(plugType);
                             }
                             else
                             {
-                                mPlugs.Add(xTargetType, new List<Type>() { plugType });
+                                plugs.Add(targetType, new List<Type>() { plugType });
                             }
                         }
                     }
@@ -123,23 +124,23 @@ namespace IL2Amiga.Engine
             ScanPlugs(plugImplementorsInheritable);
         }
 
-        public void ScanPlugs(Dictionary<Type, List<Type>> aPlugs)
+        public void ScanPlugs(Dictionary<Type, List<Type>> plugs)
         {
-            foreach (var xPlug in aPlugs)
+            foreach (var plug in plugs)
             {
-                var xImpls = xPlug.Value;
-                foreach (var xImpl in xImpls)
+                var impls = plug.Value;
+                foreach (var impl in impls)
                 {
                     #region PlugMethods scan
 
-                    foreach (var xMethod in xImpl.GetMethods(BindingFlags.Public | BindingFlags.Static))
+                    foreach (var method in impl.GetMethods(BindingFlags.Public | BindingFlags.Static))
                     {
-                        PlugMethod xAttrib = null;
-                        foreach (PlugMethod x in xMethod.GetCustomAttributes(typeof(PlugMethod), false))
+                        PlugMethod? attrib = null;
+                        foreach (PlugMethod plugMethod in method.GetCustomAttributes(typeof(PlugMethod), false))
                         {
-                            xAttrib = x;
+                            attrib = plugMethod;
                         }
-                        if (xAttrib == null)
+                        if (attrib == null)
                         {
                             //At this point we need to check the plug method actually
                             //matches a method that might need plugging.
@@ -149,26 +150,26 @@ namespace IL2Amiga.Engine
                             //   - Ctor or Cctor
 
                             bool OK = false;
-                            if (String.Equals(xMethod.Name, "ctor", StringComparison.OrdinalIgnoreCase)
-                                || String.Equals(xMethod.Name, "cctor", StringComparison.OrdinalIgnoreCase))
+                            if (String.Equals(method.Name, "ctor", StringComparison.OrdinalIgnoreCase)
+                                || String.Equals(method.Name, "cctor", StringComparison.OrdinalIgnoreCase))
                             {
                                 OK = true;
                             }
                             else
                             {
-// Skip checking methods related to fields because it's just too messy...
-// We also skip methods which do method access.
-if (xMethod.GetParameters().Where(x =>
-                                {
-                                    return x.GetCustomAttributes(typeof(FieldAccess)).Any()
-                                           || x.GetCustomAttributes(typeof(ObjectPointerAccess)).Any();
-                                }).Any())
+                                // Skip checking methods related to fields because it's just too messy...
+                                // We also skip methods which do method access.
+                                if (method.GetParameters().Where(x =>
+                                                                {
+                                                                    return x.GetCustomAttributes(typeof(FieldAccess)).Any()
+                                                                           || x.GetCustomAttributes(typeof(ObjectPointerAccess)).Any();
+                                                                }).Any())
                                 {
                                     OK = true;
                                 }
                                 else
                                 {
-                                    var xParamTypes = xMethod.GetParameters().Select(delegate (ParameterInfo x)
+                                    var paramTypes = method.GetParameters().Select(delegate (ParameterInfo x)
                                     {
                                         var result = x.ParameterType;
                                         if (result.IsByRef)
@@ -182,14 +183,14 @@ if (xMethod.GetParameters().Where(x =>
                                         return result;
                                     }).ToArray();
 
-                                    var posMethods = xPlug.Key.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public)
-                                                                            .Where(x => x.Name == xMethod.Name);
+                                    var posMethods = plug.Key.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public)
+                                                                            .Where(x => x.Name == method.Name);
                                     foreach (MethodInfo posInf in posMethods)
                                     {
                                         // If static, no this param
                                         // Otherwise, take into account first param is this param
                                         //This param is either of declaring type, or ref to declaring type or pointer
-                                        var posMethParamTypes = posInf.GetParameters().Select(delegate (ParameterInfo x)
+                                        var posMethParamTypes = posInf.GetParameters().Select(x =>
                                         {
                                             var result = x.ParameterType;
                                             if (result.IsByRef)
@@ -201,11 +202,11 @@ if (xMethod.GetParameters().Where(x =>
                                                 result = null;
                                             }
                                             return result;
-                                        }).ToArray();
+                                        }).ToImmutableArray();
 
                                         if (posInf.IsStatic)
                                         {
-                                            if (posMethParamTypes.Length != xParamTypes.Length)
+                                            if (posMethParamTypes.Length != paramTypes.Length)
                                             {
                                                 continue;
                                             }
@@ -214,8 +215,8 @@ if (xMethod.GetParameters().Where(x =>
                                             // Exact params match incl. pointers - which should be "null" types for statics since some could be pointers
                                             for (int i = 0; i < posMethParamTypes.Length; i++)
                                             {
-                                                if ((posMethParamTypes[i] == null && xParamTypes[i] != null) ||
-                                                    (posMethParamTypes[i] != null && !posMethParamTypes[i].Equals(xParamTypes[i])))
+                                                if ((posMethParamTypes[i] is null && paramTypes[i] is not null) ||
+                                                    (posMethParamTypes[i] is not null && !posMethParamTypes[i]!.Equals(paramTypes[i])))
                                                 {
                                                     OK = false;
                                                     break;
@@ -234,8 +235,7 @@ if (xMethod.GetParameters().Where(x =>
                                         else
                                         {
                                             // Exact match except possibly 1st param
-                                            if (posMethParamTypes.Length != xParamTypes.Length &&
-                                                posMethParamTypes.Length != xParamTypes.Length - 1)
+                                            if (posMethParamTypes.Length != paramTypes.Length && posMethParamTypes.Length != paramTypes.Length - 1)
                                             {
                                                 continue;
                                             }
@@ -243,10 +243,10 @@ if (xMethod.GetParameters().Where(x =>
 
                                             OK = true;
                                             // Exact match except if first param doesn't match, we skip 1st param and restart matching
-                                            for (int i = 0; i < posMethParamTypes.Length && (i + offset) < xParamTypes.Length; i++)
+                                            for (int i = 0; i < posMethParamTypes.Length && (i + offset) < paramTypes.Length; i++)
                                             {
                                                 //Continue if current type is null i.e. was a pointer as that could be any type originally.
-                                                if (xParamTypes[i + offset] != null && !xParamTypes[i + offset].Equals(posMethParamTypes[i]))
+                                                if (paramTypes[i + offset] != null && !paramTypes[i + offset].Equals(posMethParamTypes[i]))
                                                 {
                                                     if (offset == 0)
                                                     {
@@ -260,11 +260,11 @@ if (xMethod.GetParameters().Where(x =>
                                                     }
                                                 }
                                             }
-                                            if (posMethParamTypes.Length == 0 && xParamTypes.Length > 0)
+                                            if (posMethParamTypes.Length == 0 && paramTypes.Length > 0)
                                             {
                                                 //We use IsAssignableFrom here because _some_ plugs decide to use more generic types for the
                                                 //this parameter
-                                                OK = xParamTypes[0] == null || xParamTypes[0].IsAssignableFrom(posInf.DeclaringType);
+                                                OK = paramTypes[0] == null || paramTypes[0].IsAssignableFrom(posInf.DeclaringType);
                                             }
 
                                             if (!OK)
@@ -282,15 +282,15 @@ if (xMethod.GetParameters().Where(x =>
 
                             if (!OK)
                             {
-                                if (xAttrib is null || !xAttrib.IsOptional)
+                                if (attrib is null || !attrib.IsOptional)
                                 {
-                                    logger.Log(LogLevel.Warning, "Invalid plug method! Target method {method} not found", xMethod.GetFullName());
+                                    logger.Log(LogLevel.Warning, "Invalid plug method! Target method {method} not found", method.GetFullName());
                                 }
                             }
                         }
                         else
                         {
-                            if (xAttrib.IsWildcard && xAttrib.Assembler is null)
+                            if (attrib.IsWildcard && attrib.Assembler is null)
                             {
                                 logger.Log(LogLevel.Warning, "Wildcard PlugMethods need to use an assembler for now.");
                             }
@@ -301,12 +301,12 @@ if (xMethod.GetParameters().Where(x =>
 
                     #region PlugFields scan
 
-                    foreach (var xField in xImpl.GetCustomAttributes(typeof(PlugField), true).Cast<PlugField>())
+                    foreach (var xField in impl.GetCustomAttributes(typeof(PlugField), true).Cast<PlugField>())
                     {
-                        if (!mPlugFields.TryGetValue(xPlug.Key, out var xFields))
+                        if (!mPlugFields.TryGetValue(plug.Key, out var xFields))
                         {
                             xFields = new Dictionary<string, PlugField>();
-                            mPlugFields.Add(xPlug.Key, xFields);
+                            mPlugFields.Add(plug.Key, xFields);
                         }
                         if (xFields.ContainsKey(xField.FieldId))
                         {

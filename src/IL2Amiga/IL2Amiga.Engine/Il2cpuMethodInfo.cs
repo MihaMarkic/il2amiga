@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Collections.Immutable;
+using System.Reflection;
 using IL2Amiga.Engine.Attributes;
 
 namespace IL2Amiga.Engine
@@ -17,7 +18,7 @@ namespace IL2Amiga.Engine
         /// <summary>
         /// The method info for the method which plugs this one
         /// </summary>
-        public Il2cpuMethodInfo PlugMethod { get; }
+        public Il2cpuMethodInfo? PlugMethod { get; }
         public Type? MethodAssembler { get; }
         public bool IsInlineAssembler { get; }
         public bool DebugStubOff { get; }
@@ -45,31 +46,32 @@ namespace IL2Amiga.Engine
 
         public bool IsWildcard { get; set; }
 
-        public Il2cpuMethodInfo(MethodBase aMethodBase, uint aUID, TypeEnum aType, Il2cpuMethodInfo aPlugMethod, Type aMethodAssembler) : this(aMethodBase, aUID, aType, aPlugMethod, false)
+        public Il2cpuMethodInfo(MethodBase methodBase, uint uID, TypeEnum type, Il2cpuMethodInfo? plugMethod, Type? methodAssembler) 
+            : this(methodBase, uID, type, plugMethod, false)
         {
-            MethodAssembler = aMethodAssembler;
+            MethodAssembler = methodAssembler;
         }
 
 
-        public Il2cpuMethodInfo(MethodBase aMethodBase, uint aUID, TypeEnum aType, Il2cpuMethodInfo aPlugMethod)
-            : this(aMethodBase, aUID, aType, aPlugMethod, false)
+        public Il2cpuMethodInfo(MethodBase methodBase, uint uID, TypeEnum type, Il2cpuMethodInfo? plugMethod)
+            : this(methodBase, uID, type, plugMethod, false)
         {
         }
 
-        public Il2cpuMethodInfo(MethodBase aMethodBase, uint aUID, TypeEnum aType, Il2cpuMethodInfo aPlugMethod, bool isInlineAssembler)
+        public Il2cpuMethodInfo(MethodBase methodBase, uint uID, TypeEnum type, Il2cpuMethodInfo? plugMethod, bool isInlineAssembler)
         {
-            MethodBase = aMethodBase;
-            UID = aUID;
-            Type = aType;
-            PlugMethod = aPlugMethod;
+            MethodBase = methodBase;
+            UID = uID;
+            Type = type;
+            PlugMethod = plugMethod;
             IsInlineAssembler = isInlineAssembler;
 
-            var attribs = aMethodBase.GetCustomAttributes<DebugStub>(false).ToList();
-            if (attribs.Count != 0)
+            var attributes = methodBase.GetCustomAttributes<DebugStub>(false).ToImmutableArray();
+            if (attributes.Length > 0)
             {
                 var attrib = new DebugStub
                 {
-                    Off = attribs[0].Off,
+                    Off = attributes[0].Off,
                 };
                 DebugStubOff = attrib.Off;
             }

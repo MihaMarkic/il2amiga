@@ -22,7 +22,8 @@ namespace IL2Amiga.Engine
                 .SingleOrDefault()
                 ?? throw new Exception("Couldn't find Program type");
             var entryMethod = programType.GetMethod("Main") ?? throw new Exception("Couldn't find Main method on Program");
-            scanner.Execute(entryMethod, ImmutableArray<Assembly>.Empty);
+            var assemblies = assembliesFileNames.Select(fn => Assembly.LoadFrom(fn)).ToImmutableArray();
+            scanner.Execute(entryMethod, assemblies);
         }
     }
 }

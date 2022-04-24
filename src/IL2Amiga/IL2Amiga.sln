@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IL2CPU.Debug.Symbols", "IL2
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DapperExtensions.StrongName", "DapperExtensions.StrongName\DapperExtensions.StrongName.csproj", "{F3C0CD9A-D9F4-4206-8A45-50F4E0592F95}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IL2Amiga.Plugs", "IL2Amiga.Plugs\IL2Amiga.Plugs.csproj", "{5B85BFB8-8780-4637-AAB9-94D71151459B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,6 +44,12 @@ Global
 		{F3C0CD9A-D9F4-4206-8A45-50F4E0592F95}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F3C0CD9A-D9F4-4206-8A45-50F4E0592F95}.TEST|Any CPU.ActiveCfg = Debug|Any CPU
 		{F3C0CD9A-D9F4-4206-8A45-50F4E0592F95}.TEST|Any CPU.Build.0 = Debug|Any CPU
+		{5B85BFB8-8780-4637-AAB9-94D71151459B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B85BFB8-8780-4637-AAB9-94D71151459B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B85BFB8-8780-4637-AAB9-94D71151459B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B85BFB8-8780-4637-AAB9-94D71151459B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B85BFB8-8780-4637-AAB9-94D71151459B}.TEST|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B85BFB8-8780-4637-AAB9-94D71151459B}.TEST|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
